@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Sky & Space Shooter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+            touch-action: none;
+        }
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            max-width: 800px;
+            max-height: 600px;
+            background: linear-gradient(to bottom, #001a33 0%, #000428 50%, #000 100%);
+            border: 3px solid #0ff;
+            box-shadow: 0 0 30px rgba(0,255,255,0.5);
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #0ff;
+            font-size: 16px;
+            text-shadow: 0 0 10px #0ff;
+            z-index: 10;
+            pointer-events: none;
+        }
+        #upgradePanel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 20, 40, 0.95);
+            padding: 10px;
+            border: 2px solid #0ff;
+            color: #0ff;
+            font-size: 12px;
+            max-width: 200px;
+            z-index: 10;
+            max-height: 90vh;
+            overflow-y: auto;
+        }        .upgrade {
+            margin: 6px 0;
+            padding: 6px;
+            background: rgba(0, 100, 150, 0.3);
+            border: 1px solid #0aa;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+        }
+        .upgrade:active {
+            background: rgba(0, 150, 200, 0.7);
+            transform: scale(0.95);
+        }
+        .upgrade.maxed {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: rgba(50, 50, 50, 0.3);
+        }
+        .upgrade-name {
+            font-weight: bold;
+            color: #fff;
+            font-size: 11px;
+        }
+        .upgrade-cost {
+            color: #ff0;
+            font-size: 10px;
+        }
+        .upgrade-level {
+            color: #0f0;
+            font-size: 10px;
+        }
+        #mobileControls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            z-index: 15;
+            display: none;
+        }        .joystick {
+            width: 120px;
+            height: 120px;
+            background: rgba(0, 255, 255, 0.2);
+            border: 3px solid rgba(0, 255, 255, 0.5);
+            border-radius: 50%;
+            position: relative;
+            touch-action: none;
+        }
+        .joystick-knob {
+            width: 50px;
+            height: 50px;
+            background: rgba(0, 255, 255, 0.6);
+            border: 2px solid #0ff;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.8);
+        }
+        #shootButton {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 100px;
+            height: 100px;
+            background: rgba(255, 0, 0, 0.3);
+            border: 3px solid rgba(255, 0, 0, 0.6);
+            border-radius: 50%;
+            color: #f00;
+            font-size: 14px;
+            font-weight: bold;            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 15;
+            cursor: pointer;
+            user-select: none;
+            touch-action: none;
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+        }
+        #shootButton:active {
+            background: rgba(255, 0, 0, 0.6);
+            transform: scale(0.95);
+        }
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #f00;
+            font-size: 36px;
+            text-shadow: 0 0 20px #f00;
+            display: none;
+            z-index: 20;
+        }
+        #gameOver button {
+            margin-top: 20px;
+            padding: 15px 30px;
+            font-size: 20px;
+            background: #0ff;
+            border: none;
+            color: #000;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            text-shadow: none;
+        }        #gameOver button:active {
+            background: #0aa;
+            transform: scale(0.95);
+        }
+        #instructions {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #0ff;
+            font-size: 12px;
+            text-align: center;
+            pointer-events: none;
+        }
+        
+        @media (max-width: 768px) {
+            #mobileControls, #shootButton {
+                display: flex;
+            }
+            #upgradePanel {
+                font-size: 11px;
+                padding: 8px;
+                max-width: 160px;
+            }
+            #instructions {
+                display: none;
+            }
+            #ui {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>        <div id="ui">
+            <div>Score: <span id="score">0</span></div>
+            <div>Health: <span id="health">100</span></div>
+            <div>Level: <span id="level">1</span></div>
+            <div style="color: #ff0;">Credits: <span id="credits">0</span></div>
+        </div>
+        <div id="upgradePanel">
+            <div style="font-weight: bold; margin-bottom: 8px; text-align: center; color: #fff;">UPGRADES</div>
+            <div class="upgrade" id="upgradeFireRate">
+                <div class="upgrade-name">Fire Rate</div>
+                <div class="upgrade-level">Level: <span id="fireRateLevel">1</span>/5</div>
+                <div class="upgrade-cost">Cost: <span id="fireRateCost">50</span></div>
+            </div>
+            <div class="upgrade" id="upgradeDamage">
+                <div class="upgrade-name">Damage</div>
+                <div class="upgrade-level">Level: <span id="damageLevel">1</span>/5</div>
+                <div class="upgrade-cost">Cost: <span id="damageCost">75</span></div>
+            </div>
+            <div class="upgrade" id="upgradeSpeed">
+                <div class="upgrade-name">Speed</div>
+                <div class="upgrade-level">Level: <span id="speedLevel">1</span>/5</div>
+                <div class="upgrade-cost">Cost: <span id="speedCost">60</span></div>
+            </div>
+            <div class="upgrade" id="upgradeHealth">
+                <div class="upgrade-name">Max Health</div>
+                <div class="upgrade-level">Level: <span id="healthLevel">1</span>/5</div>
+                <div class="upgrade-cost">Cost: <span id="healthCost">100</span></div>
+            </div>
+            <div class="upgrade" id="upgradeMultishot">
+                <div class="upgrade-name">Multi-Shot</div>
+                <div class="upgrade-level">Level: <span id="multishotLevel">0</span>/3</div>
+                <div class="upgrade-cost">Cost: <span id="multishotCost">150</span></div>
+            </div>
+        </div>        
+        <div id="mobileControls">
+            <div class="joystick" id="joystick">
+                <div class="joystick-knob" id="joystickKnob"></div>
+            </div>
+        </div>
+        
+        <div id="shootButton">SHOOT</div>
+        
+        <div id="gameOver">
+            GAME OVER
+            <div style="font-size: 20px; margin-top: 10px;">Final Score: <span id="finalScore">0</span></div>
+            <button onclick="restartGame()">RESTART</button>
+        </div>
+        <div id="instructions">
+            Desktop: WASD/Arrows: Move | SPACE/Click: Shoot | Mouse: Aim
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 800;
+        canvas.height = 600;
+
+        let gameRunning = true;
+        let score = 0;
+        let credits = 0;
+        let health = 100;
+        let level = 1;
+        let mouseX = canvas.width / 2;
+        let mouseY = canvas.height / 2;
+        let isShooting = false;
